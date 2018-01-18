@@ -16,7 +16,12 @@ abstract class Driver {
 
 	public function __construct($config = array())
 	{
-		$this->_config = array_merge($this->_default_config, array_filter($config));
+		$this->_config = array_merge($this->_default_config, array_filter($config, 'static::is_not_empty'));
+	}
+
+	protected static function is_not_empty($var)
+	{
+		return (isset($var) && $var !== '');
 	}
 
 	protected function send_data($data, $outcome = null)
@@ -31,7 +36,7 @@ abstract class Driver {
 
 		// remove original word from the results
 		if ($response) {
-			$response = array_diff($response, array($word));
+			$response = array_values(array_diff($response, array($word)));
 		}
 
 		return $this->send_data($response);
