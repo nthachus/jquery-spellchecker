@@ -24,13 +24,13 @@ class Enchant extends \SpellChecker\Driver
 
 		if (!function_exists('enchant_broker_init'))
 		{
-			throw new \Exception('Enchant library not found.');
+			throw new \RuntimeException('Enchant library not found.');
 		}
 
 		$this->broker = enchant_broker_init();
 		if (!enchant_broker_dict_exists($this->broker, $this->_config['lang']))
 		{
-			throw new \Exception('Enchant dictionary not found for lang: ' . $this->_config['lang']);
+			throw new \InvalidArgumentException('Enchant dictionary not found for lang: ' . $this->_config['lang']);
 		}
 
 		$this->dictionary = enchant_broker_request_dict($this->broker, $this->_config['lang']);

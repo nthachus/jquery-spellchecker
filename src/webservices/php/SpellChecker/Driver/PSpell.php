@@ -13,7 +13,7 @@ class PSpell extends \SpellChecker\Driver
 {
 	protected $_default_config = array(
 		'encoding' => 'utf-8',
-		'dictionary' => 'dictionary/pspell/',
+		'dictionary' => '/../../../../../dictionary/pspell/',
 		'lang' => 'en'
 	);
 
@@ -21,6 +21,7 @@ class PSpell extends \SpellChecker\Driver
 
 	public function __construct($config = array())
 	{
+		$this->_default_config['dictionary'] = __DIR__ . $this->_default_config['dictionary'];
 		parent::__construct($config);
 
 		if (!function_exists('pspell_new')) {
