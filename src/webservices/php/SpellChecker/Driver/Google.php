@@ -21,7 +21,7 @@ class Google extends \SpellChecker\Driver
 		parent::__construct($config);
 
 		if (!function_exists('curl_init')) {
-			throw new \Exception('cURL is not available.');
+			throw new \RuntimeException('cURL is not available.');
 		}
 	}
 
@@ -61,6 +61,7 @@ class Google extends \SpellChecker\Driver
 
 	private function get_matches($text)
 	{
+		// TODO: use Google suggestion service
 		$url = 'https://www.google.com/tbproxy/spell?lang=' . $this->_config['lang'];
 		/** @noinspection SpellCheckingInspection */
 		$body = '<?xml version="1.0" encoding="' . $this->_config['encoding']
@@ -84,11 +85,11 @@ class Google extends \SpellChecker\Driver
 
 		curl_close($ch);
 		if (isset($error))
-			throw new \RuntimeException($error);
+			throw new \UnexpectedValueException($error);
 
 		$xml = @simplexml_load_string($xml_response);
 		if (!isset($xml->c))
-			throw new \LogicException(empty($xml) ? static::strip_html($xml_response) : $xml);
+			throw new \InvalidArgumentException(empty($xml) ? static::strip_html($xml_response) : $xml);
 
 		$matches = array();
 		foreach ($xml->c as $word) {

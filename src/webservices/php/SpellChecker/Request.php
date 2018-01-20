@@ -24,12 +24,19 @@ class Request {
 
 	public static function execute_action($inputs = array(), $config = array())
 	{
-		$lang = isset($inputs['lang']) ? $inputs['lang'] : 'en';
+		$class = '\SpellChecker\Driver\\' . ($name = static::get_driver_class($inputs));
+		if (!class_exists($class)) {
+			throw new \InvalidArgumentException("Not supported driver: $name");
+		}
 
-		$class = '\SpellChecker\Driver\\' . static::get_driver_class($inputs);
+		$lang = isset($inputs['lang']) ? $inputs['lang'] : 'en';
 		$driver = new $class(array_merge($config, compact('lang')));
 
-		return $driver->{$inputs['action']}($inputs);
+		if (!method_exists($driver, $action = $inputs['action'])) {
+			throw new \BadMethodCallException("Not supported action $name::$action()");
+		}
+
+		return $driver->{$action}($inputs);
 	}
 
 	private static function get_driver_class($inputs = array(), $default = 'PSpell')
