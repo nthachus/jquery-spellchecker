@@ -10,7 +10,7 @@
  */
 class Request {
 
-	public function __construct($inputs = array(), $response = 'static::send_response', $config = array())
+	public function __construct($inputs = array(), $config = array())
 	{
 		if (empty($inputs))
 			$inputs = $_POST;
@@ -18,19 +18,27 @@ class Request {
 		if (empty($inputs['action']))
 			return;
 
-		$data = static::execute_action($inputs, $config);
-		call_user_func($response, $data);
+		$response = static::execute_action($inputs, $config);
+		static::send_response($response);
 	}
 
 	public static function execute_action($inputs = array(), $config = array())
 	{
-		$driver = isset($inputs['driver']) ? $inputs['driver'] : 'PSpell';
 		$lang = isset($inputs['lang']) ? $inputs['lang'] : 'en';
 
-		$class = '\SpellChecker\Driver\\' . ucfirst(strtolower($driver));
+		$class = '\SpellChecker\Driver\\' . static::get_driver_class($inputs);
 		$driver = new $class(array_merge($config, compact('lang')));
 
 		return $driver->{$inputs['action']}($inputs);
+	}
+
+	private static function get_driver_class($inputs = array(), $default = 'PSpell')
+	{
+		if (empty($inputs['driver']))
+			return $default;
+
+		$driver = ucfirst(strtolower($inputs['driver']));
+		return str_replace(array('spell', 'engine'), array('Spell', 'Engine'), $driver);
 	}
 
 	public static function send_response($data)
