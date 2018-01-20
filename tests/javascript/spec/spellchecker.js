@@ -335,7 +335,7 @@ describe("SpellChecker", function() {
 
       waitsFor(function() {
         return checked;
-      }, "Failed getting the list of incorret words", 750);
+      }, "Failed getting the list of incorrect words", 750);
 
       runs(function() {
         expect(typeof incorrectWords).toBe('object');
@@ -368,7 +368,7 @@ describe("SpellChecker", function() {
 
       waitsFor(function() {
         return checked;
-      }, "Failed getting the list of incorret words", 750);
+      }, "Failed getting the list of incorrect words", 750);
 
       runs(function() {
         expect(typeof incorrectWords).toBe('object');
