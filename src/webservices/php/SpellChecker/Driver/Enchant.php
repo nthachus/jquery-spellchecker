@@ -39,10 +39,10 @@ class Enchant extends \SpellChecker\Driver
 	public function __destruct()
 	{
 		if (isset($this->dictionary))
-			enchant_broker_free_dict($this->dictionary);
+			@enchant_broker_free_dict($this->dictionary);
 
 		if (isset($this->broker))
-			enchant_broker_free($this->broker);
+			@enchant_broker_free($this->broker);
 	}
 
 	protected function get_word_suggestions($word)

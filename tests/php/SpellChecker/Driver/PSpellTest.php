@@ -59,6 +59,23 @@ function pspell_check($dict_link, $word)
 
 class PSpellTest extends \PHPUnit_Framework_TestCase
 {
+	static $LOADED = true;
+
+	/**
+	 * @expectedException \RuntimeException
+	 * @expectedExceptionMessage PSpell library not found.
+	 */
+	public function testNoLibrary()
+	{
+		static::$LOADED = false;
+		try {
+			new PSpell();
+		} catch (\Exception $e) {
+			static::$LOADED = true;
+			throw $e;
+		}
+	}
+
 	public function testConstructor()
 	{
 		$resourceProp = new \ReflectionProperty(PSpell::class, 'pspell_link');
