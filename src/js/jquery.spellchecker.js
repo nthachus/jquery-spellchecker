@@ -10,7 +10,7 @@
     factory(root, require("jquery"), require("findandreplacedomtext"));
   } else {
     // Browser
-    factory(root, jQuery, root.findAndReplaceDOMText);
+    factory(root, root.jQuery, root.findAndReplaceDOMText);
   }
 }(this, function(window, $, findAndReplaceDOMText) {
 
@@ -246,7 +246,7 @@
   IncorrectWordsInline.prototype.destroy = function() {
     this.element.off('.' + pluginName);
     try {
-      findAndReplaceDOMText.revert();
+      (this.element[0].farInstance || findAndReplaceDOMText).revert();
     } catch(e) {}
   };
 
@@ -533,13 +533,34 @@
   };
 
   HtmlParser.prototype.replaceText = function(regExp, element, replaceText, captureGroup) {
-    findAndReplaceDOMText(regExp, element, replaceText, captureGroup);
+    var prepMatch = function(m, mi) {
+      // Support captureGroup (a deprecated feature)
+      if (!m[0]) throw 'findAndReplaceDOMText cannot handle zero-length matches';
+
+      if (captureGroup > 0) {
+        var cg = m[captureGroup];
+        m.index += m[0].indexOf(cg);
+        m[0] = cg;
+      }
+
+      m.endIndex = m.index + m[0].length;
+      m.startIndex = m.index;
+      m.index = mi;
+
+      return m;
+    };
+    var instance = findAndReplaceDOMText(element, {find: regExp, replace: replaceText, prepMatch: prepMatch});
+
+    element.farInstance = instance;
+    findAndReplaceDOMText.revert = function() {
+      return instance.revert();
+    };
   };
 
   HtmlParser.prototype.replaceWord = function(oldWord, replacement, element) {
 
     try {
-      findAndReplaceDOMText.revert();
+      (element[0].farInstance || findAndReplaceDOMText).revert();
     } catch(e) {}
 
     var regExp = new RegExp('(^|[^' + letterChars + '])(' + RegExp.escape(oldWord) + ')(?=[^' + letterChars + ']|$)', 'g');
@@ -561,7 +582,8 @@
     var replaceFill;
     var c;
 
-    return function(fill, i) {
+    return function(portion, match) {
+      var fill = portion.text, i = match.startIndex;
 
       // Reset the replacement for each match
       if (i !== c) {
@@ -606,7 +628,8 @@
     var c;
     var replaceElement;
 
-    return function(fill, i, word) {
+    return function(portion, match) {
+      var fill = portion.text, i = match.startIndex, word = match[0];
 
       // Replacement node
       var span = $('<span />', {

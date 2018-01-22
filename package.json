@@ -1,20 +1,26 @@
 {
-  "name": "jquery-spellchecker",
+  "name": "jquery.spellchecker",
   "title": "jQuery Spellchecker",
   "description": "A jquery spellchecker plugin",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "homepage": "https://github.com/badsyntax/jquery-spellchecker",
   "author": {
     "name": "Richard Willis",
     "email": "willis.rh@gmail.com",
     "url": "http://badsyntax.co"
   },
+  "contributors": [
+    {
+      "name": "Thach Nguyen",
+      "email": "nthachus@gmail.com"
+    }
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/badsyntax/jquery-spellchecker.git"
+    "url": "https://github.com/nthachus/jquery-spellchecker.git"
   },
   "bugs": {
-    "url": "https://github.com/badsyntax/jquery-spellchecker/issues"
+    "url": "https://github.com/nthachus/jquery-spellchecker/issues"
   },
   "license": "MIT",
   "engines": {
@@ -24,7 +30,8 @@
     "test": "grunt jasmine"
   },
   "dependencies": {
-    "jquery": "1.*"
+    "jquery": "1.*",
+    "findandreplacedomtext": "~0.4.4"
   },
   "devDependencies": {
     "grunt": "~0.3.15",

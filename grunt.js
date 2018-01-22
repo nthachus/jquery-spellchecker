@@ -14,8 +14,12 @@ module.exports = function(grunt) {
     },
     concat: {
       dist: {
-        src: ['<banner:meta.banner>', '<file_strip_banner:src/js/jquery.spellchecker.js>'],
-        dest: 'dist/js/jquery.spellchecker.js'
+        src: [
+          'node_modules/findandreplacedomtext/src/findAndReplaceDOMText.js',
+          '<banner:meta.banner>',
+          '<file_strip_banner:src/js/<%= pkg.name %>.js>'
+        ],
+        dest: 'dist/js/<%= pkg.name %>.js'
       }
     },
     copy: {
@@ -28,13 +32,13 @@ module.exports = function(grunt) {
     min: {
       dist: {
         src: ['<banner:meta.banner>', '<config:concat.dist.dest>'],
-        dest: 'dist/js/jquery.spellchecker.min.js'
+        dest: 'dist/js/<%= pkg.name %>.min.js'
       }
     },
     mincss: {
       compress: {
         files: {
-          "dist/css/jquery.spellchecker.min.css": ["src/css/jquery.spellchecker.css"]
+          "dist/css/<%= pkg.name %>.min.css": ["src/css/*.css"]
         }
       }
     },
@@ -68,6 +72,8 @@ module.exports = function(grunt) {
       globals: {
         jQuery: true,
         $: true,
+        module: false,
+        require: false,
         alert: false
       }
     },
