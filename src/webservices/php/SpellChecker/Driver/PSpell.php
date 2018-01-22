@@ -33,8 +33,8 @@ class PSpell extends \SpellChecker\Driver
 
 			// if the ASpell dictionaries that you want are not installed,
 			// copy the ASpell dictionaries and set the path to the dictionaries here
-			pspell_config_data_dir($conf, $dir);
-			pspell_config_dict_dir($conf, $dir);
+			@pspell_config_data_dir($conf, $dir);
+			@pspell_config_dict_dir($conf, $dir);
 
 			$this->pspell_link = @pspell_new_config($conf);
 		} else {
