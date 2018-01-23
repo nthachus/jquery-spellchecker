@@ -5,7 +5,8 @@
 function function_exists($name)
 {
 	return ($name === 'enchant_broker_init' && EnchantTest::$LOADED)
-		|| ($name === 'pspell_new' && PSpellTest::$LOADED);
+		|| ($name === 'pspell_new' && PSpellTest::$LOADED)
+		|| ($name === 'curl_init' && GoogleTest::$LOADED);
 }
 
 function enchant_broker_free_dict(&$dict)

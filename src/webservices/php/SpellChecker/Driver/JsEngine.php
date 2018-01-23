@@ -47,6 +47,8 @@ class JsEngine extends \SpellChecker\Driver
 				if (strpos($prop, '_config') === false)
 					$this->{$prop} =& $instance->{$prop};
 			}
+			unset($instance);
+
 		} else {
 			// loads all dictionaries requested by the API
 			$this->loadDictionary($this->_config['lang']);
@@ -55,18 +57,24 @@ class JsEngine extends \SpellChecker\Driver
 			$this->loadCustomDictionary($this->_config['centralDictionary']);
 
 			// ban a list of words which will never be allowed as correct spellings. This is great for filtering profanity.
-			$this->loadCustomBannedWords('rules/banned-words.txt');
+			$this->loadCustomBannedWords($this->getConfig('bannedWordsFile', 'rules/banned-words.txt'));
 			// you can also add banned words from an array which you could easily populate from an SQL query
-			//$this->addBannedWords(array('veryRudeWord'));
+			if (!empty($this->_config['bannedWords']))
+				$this->addBannedWords((array)$this->_config['bannedWords']);//veryRudeWord
 
 			// load a lost of Enforced Corrections from a file. This allows you to enforce a spelling suggestion for a specific word or acronym.
-			$this->loadEnforcedCorrections('rules/enforced-corrections.txt');
+			$this->loadEnforcedCorrections($this->getConfig('enforcedCorrectionsFile', 'rules/enforced-corrections.txt'));
 
 			// load a list of common typing mistakes to fine tune the suggestion performance.
-			$this->loadCommonTypos('rules/common-mistakes.txt');
+			$this->loadCommonTypos($this->getConfig('commonMistakesFile', 'rules/common-mistakes.txt'));
 
 			@file_put_contents($cacheFile, serialize($this));
 		}
+	}
+
+	protected function getConfig($key, $default = null)
+	{
+		return array_key_exists($key, $this->_config) ? $this->_config[$key] : $default;
 	}
 
 	public function setContext($tokens)
@@ -101,10 +109,10 @@ class JsEngine extends \SpellChecker\Driver
 
 		$this->_dictArray[$id] = array();
 
-		$delimit = "\n==========================================\n";
+		static $delimit = "\n==========================================\n";
 		list($words, $phones, $proximity) = explode($delimit, $strWholeDict);
 
-		$smallDelimit = "\n+++++++++\n";
+		static $smallDelimit = "\n+++++++++\n";
 		$wordsByLetter = explode($smallDelimit, $words);
 		foreach ($wordsByLetter as $wordsInLetter) {
 
@@ -132,7 +140,7 @@ class JsEngine extends \SpellChecker\Driver
 		}
 	}
 
-	private function clearCache()
+	public function clearCache()
 	{
 		unset($this->simpleSpellUncasedCache, $this->simpleSpellCasedCache/*, $this->suggestionsCache*/);
 
@@ -162,7 +170,7 @@ class JsEngine extends \SpellChecker\Driver
 		return $this->buildDictionary($out, $key);
 	}
 
-	protected function buildDictionary($arrWholeDict, $idInMemory = false)
+	public function buildDictionary($arrWholeDict, $idInMemory = false)
 	{
 		if ($idInMemory) {
 			$this->clearCache();
@@ -171,7 +179,7 @@ class JsEngine extends \SpellChecker\Driver
 		sort($arrWholeDict);
 		$arrWholeDict = array_unique($arrWholeDict);
 
-		$smallDelimit = "+++++++++\n";
+		static $smallDelimit = "+++++++++\n";
 		$words = '';
 		$oldWord = '#';
 		$arrPhones = array();
@@ -253,7 +261,7 @@ class JsEngine extends \SpellChecker\Driver
 			$this->_metaArray[$idInMemory] = $arrPhones;
 		}
 
-		$delimit = "==========================================\n";
+		static $delimit = "==========================================\n";
 		return $words . $delimit . $phones . $delimit;
 	}
 
@@ -277,7 +285,7 @@ class JsEngine extends \SpellChecker\Driver
 		$this->addBannedWords($out);
 	}
 
-	protected function addBannedWords($array)
+	public function addBannedWords($array)
 	{
 		foreach ($array as $key) {
 			$this->bannedWords[strtolower($key)] = false;
@@ -304,7 +312,7 @@ class JsEngine extends \SpellChecker\Driver
 		$this->buildEnforcedCorrections($out);
 	}
 
-	private function buildEnforcedCorrections($array)
+	protected function buildEnforcedCorrections($array)
 	{
 		foreach ($array as $line) {
 			// USA --> United States Of America || United States Army
@@ -702,7 +710,7 @@ class JsEngine extends \SpellChecker\Driver
 							$p = strpos($posStr, strtoupper('$' . $suggestion . '$'));
 						}
 
-						if ($p > 0) {
+						if ($p !== false) {//> 0
 							// POSITION
 							if (strpos($posStr, '$+=') === 0) {
 								$distance -= 0.3;

@@ -38,7 +38,7 @@ function pspell_new_config(array $config)
 	assert(isset($config['language']));
 	assert(isset($config['encoding']));
 
-	return isset($config['dict_dir']) ? crc32(var_export($config, true)) : false;
+	return isset($config['dict_dir']) ? crc32(serialize($config)) : false;
 }
 
 function pspell_suggest($dict_link, $word)
@@ -92,7 +92,7 @@ class PSpellTest extends \PHPUnit_Framework_TestCase
 		$object = new PSpell(array('lang' => 'de', 'dictionary' => $dir = __DIR__ . '/../../../../dictionary/'));
 
 		$expected = array('language' => 'de', 'encoding' => 'utf-8', 'data_dir' => $dir, 'dict_dir' => $dir);
-		$this->assertEquals(crc32(var_export($expected, true)), $resourceProp->getValue($object));
+		$this->assertEquals(crc32(serialize($expected)), $resourceProp->getValue($object));
 	}
 
 	/**
