@@ -29,6 +29,8 @@ class JsEngine extends \SpellChecker\Driver
 	private $simpleSpellCasedCache = array();
 	private $simpleSpellUncasedCache = array();
 
+	private $_cache_config;
+
 	public function __construct($config = array())
 	{
 		$this->_default_config['dictionaryPath'] = __DIR__ . $this->_default_config['dictionaryPath'];
@@ -39,9 +41,8 @@ class JsEngine extends \SpellChecker\Driver
 		}
 
 		// serialize to md5 cache file
-		unset($config['lang']);
-		$cacheFile = $this->_config['dictionaryPath'] . $this->_config['lang'] . '.' . md5(serialize($config));
-		if (file_exists($cacheFile) && ($instance = @unserialize(@file_get_contents($cacheFile)))) {
+		$this->_cache_config = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'PHPSpellCheck.' . md5(serialize($this->_config));
+		if (file_exists($this->_cache_config) && ($instance = @unserialize(@file_get_contents($this->_cache_config)))) {
 
 			foreach (get_object_vars($this) as $prop => $val) {
 				if (strpos($prop, '_config') === false)
@@ -67,9 +68,12 @@ class JsEngine extends \SpellChecker\Driver
 
 			// load a list of common typing mistakes to fine tune the suggestion performance.
 			$this->loadCommonTypos($this->getConfig('commonMistakesFile', 'rules/common-mistakes.txt'));
-
-			@file_put_contents($cacheFile, serialize($this));
 		}
+	}
+
+	public function __destruct()
+	{
+		@file_put_contents($this->_cache_config, serialize($this));
 	}
 
 	protected function getConfig($key, $default = null)

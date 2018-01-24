@@ -69,12 +69,16 @@ class EnchantTest extends \PHPUnit_Framework_TestCase
 	public function testNoLibrary()
 	{
 		static::$LOADED = false;
-		try {
-			new Enchant();
-		} catch (\Exception $e) {
-			static::$LOADED = true;
-			throw $e;
-		}
+		new Enchant();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	protected function tearDown()
+	{
+		parent::tearDown();
+		static::$LOADED = true;
 	}
 
 	public function testConstructor()

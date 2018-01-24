@@ -68,12 +68,16 @@ class PSpellTest extends \PHPUnit_Framework_TestCase
 	public function testNoLibrary()
 	{
 		static::$LOADED = false;
-		try {
-			new PSpell();
-		} catch (\Exception $e) {
-			static::$LOADED = true;
-			throw $e;
-		}
+		new PSpell();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	protected function tearDown()
+	{
+		parent::tearDown();
+		static::$LOADED = true;
 	}
 
 	public function testConstructor()

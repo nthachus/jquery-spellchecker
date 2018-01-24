@@ -2,14 +2,15 @@
 
 class JsEngineTest extends \PHPUnit_Framework_TestCase
 {
-	const DICT_PATH = '/../../../../dictionary/jspell/';
-
-	private static function flushCache()
+	private static function flushCache($return = false)
 	{
-		foreach (scandir($path = __DIR__ . static::DICT_PATH) as $file) {
-			if (preg_match('/^[a-z]{2}(?:_[A-Z]{2})?\.[A-F0-9a-f]{32}$/', $file))
-				@unlink($path . $file);
+		foreach (glob(sys_get_temp_dir() . '/PHPSpellCheck.*') as $file) {
+			if ($return)
+				return $file;
+			else
+				@unlink($file);
 		}
+		return null;
 	}
 
 	/**
@@ -21,21 +22,12 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 		static::flushCache();
 	}
 
-	private static function hasCache($lang = 'en')
-	{
-		foreach (scandir($path = __DIR__ . static::DICT_PATH) as $file) {
-			if (preg_match('/^' . $lang . '\.[A-F0-9a-f]{32}$/', $file))
-				return $path . $file;
-		}
-		return false;
-	}
-
 	public function testConstructor()
 	{
 		$constructor = (new \ReflectionClass(JsEngine::class))->getConstructor();
 
 		static::flushCache();
-		$this->assertFalse(static::hasCache());
+		$this->assertNull(static::flushCache(true));
 
 		// get mock, without the constructor being called
 		$methods = array('loadDictionary', 'loadCustomDictionary', 'loadCustomBannedWords', 'loadEnforcedCorrections', 'loadCommonTypos');
@@ -50,11 +42,27 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 
 		// now call the constructor
 		$constructor->invoke($mock);
-		$this->assertNotEmpty($cacheFile = static::hasCache());
+
+		// destructor
+		$p = new \ReflectionProperty(\PHPUnit_Framework_TestCase::class, 'mockObjects');
+		$p->setAccessible(true);
+		$this->assertCount(1, $p->getValue($this));
+		$p->setValue($this, array());
+		//
+		$mock->{'__phpunit_cleanup'}();
+		$expected = (array)$mock;
+		unset($mock);
+
+		$this->assertNotEmpty($cacheFile = static::flushCache(true));
+		$mockSize = filesize($cacheFile);
 
 		// constructor from cache
 		$object = (array)(new JsEngine());
-		$this->assertEquals(array_intersect_key((array)$mock, $object), $object);
+		$this->assertEquals(array_intersect_key($expected, $object), $object);
+
+		// destructor
+		unset($object);
+		$this->assertEquals($mockSize + 6 - 60, filesize($cacheFile));
 
 		@unlink($cacheFile);
 	}
@@ -124,7 +132,7 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 	 */
 	public function testBuildDictionary()
 	{
-		$str = @file_get_contents(__DIR__ . static::DICT_PATH . 'en.dic');
+		$str = @file_get_contents(__DIR__ . '/../../../../dictionary/jspell/en.dic');
 		$this->assertNotEmpty($str);
 
 		static $delimit = "\n==========================================\n";
