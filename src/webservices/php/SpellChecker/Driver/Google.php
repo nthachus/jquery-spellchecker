@@ -16,94 +16,90 @@ class Google extends \SpellChecker\Driver
 		'lang' => 'en'
 	);
 
+	protected $http;
+
+	private $_cache = array();
+	private $_cache_file;
+
 	public function __construct($config = array())
 	{
 		parent::__construct($config);
 
-		if (!function_exists('curl_init')) {
+		if (!function_exists('curl_init') || ($ch = @curl_init()) === false) {
 			throw new \RuntimeException('cURL is not available.');
 		}
+
+		curl_setopt($ch, CURLOPT_HEADER, false);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+		/** @noinspection SpellCheckingInspection */
+		curl_setopt($this->http = $ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0');
+
+		$this->_cache_file = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'GSpell.' . md5(serialize($this->_config));
+		if (file_exists($this->_cache_file)) {
+			$this->_cache = @unserialize(@file_get_contents($this->_cache_file));
+		}
+	}
+
+	public function __destruct()
+	{
+		if (isset($this->http))
+			@curl_close($this->http);
+
+		if (!empty($this->_cache))
+			@file_put_contents($this->_cache_file, serialize($this->_cache));
 	}
 
 	protected function get_word_suggestions($word)
 	{
 		$matches = $this->get_matches($word);
 
-		if (isset($matches[0][3]) && ($s = trim($matches[0][3]))) {
-			return explode("\t", $s);
+		if (!empty($matches)) {
+			sort($matches);
 		}
 
-		return array();
-	}
-
-	public function get_incorrect_words($inputs = array())
-	{
-		$texts = isset($inputs['text']) ? (array)$inputs['text'] : array();
-
-		$response = array();
-		foreach ($texts as $text) {
-			$words = $this->get_matches($text);
-
-			$incorrect_words = array();
-			foreach ($words as $word) {
-				$incorrect_words[] = mb_substr($text, $word[0], $word[1], $this->_config['encoding']);
-			}
-
-			$response[] = array_unique(array_filter($incorrect_words));
-		}
-
-		return $this->send_data(array_filter($response), 'success');
+		return $matches;
 	}
 
 	protected function is_incorrect_word($word)
 	{
+		$words = $this->get_matches($word);
+
+		return empty($words) || !preg_grep('/^' . preg_quote($word, '/') . '$/i', $words);
 	}
 
 	private function get_matches($text)
 	{
-		// TODO: use Google suggestion service
-		$url = 'https://www.google.com/tbproxy/spell?lang=' . $this->_config['lang'];
-		/** @noinspection SpellCheckingInspection */
-		$body = '<?xml version="1.0" encoding="' . $this->_config['encoding']
-			. '"?><spellrequest textalreadyclipped="0" ignoredups="0" ignoredigits="1" ignoreallcaps="0"><text>'
-			. htmlspecialchars($text, ENT_NOQUOTES, $this->_config['encoding']) . '</text></spellrequest>';
+		if (empty($text))
+			return array();
 
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_HEADER, false);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_POST, 1);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+		if (isset($this->_cache[$cacheKey = strtolower($text)]))
+			return $this->_cache[$cacheKey];
 
-		$xml_response = curl_exec($ch);
+		// use Google suggestion service
+		$url = 'https://www.google.com/complete/search?output=toolbar&hl=' . $this->_config['lang'] . '&q=' . urlencode($text);
+		curl_setopt($this->http, CURLOPT_URL, $url);
+
+		$xml_response = curl_exec($this->http);
 		if ($xml_response === false)
-			$error = 'cURL error: ' . curl_error($ch);
+			throw new \UnexpectedValueException('cURL error: ' . curl_error($this->http));
 
-		curl_close($ch);
-		if (isset($error))
-			throw new \UnexpectedValueException($error);
-
-		$xml = @simplexml_load_string($xml_response);
-		if (!isset($xml->c))
-			throw new \InvalidArgumentException(empty($xml) ? static::strip_html($xml_response) : $xml);
+		$xml = @simplexml_load_string($xml_response = trim($xml_response));
+		if ($xml === false || strcasecmp('topLevel', $xml->getName()) != 0)
+			throw new \InvalidArgumentException(static::strip_html($xml_response));
 
 		$matches = array();
-		foreach ($xml->c as $word) {
+		foreach ($xml->xpath('//suggestion[@data]') as $node) {
 
-			$attributes = $word->attributes();
-			$matches[] = array(
-				intval($attributes->o),
-				intval($attributes->l),
-				intval($attributes->s),
-				(string)$word
-			);
+			$word = (string)$node['data'];
+			if (!preg_match('/\s+/u', $word))
+				$matches[] = $word;
 		}
 
-		return $matches;
+		return $this->_cache[$cacheKey] = array_unique($matches);
 	}
 
 	private static function strip_html($html)
@@ -111,6 +107,6 @@ class Google extends \SpellChecker\Driver
 		foreach (array('head', 'title', 'style', 'script') as $tag) {
 			$html = preg_replace('#\s*<' . $tag . '(\s[^>]*)?>.*?</' . $tag . '>#sui', '', $html);
 		}
-		return trim(strip_tags($html));
+		return trim(strip_tags($html)) ?: $html;
 	}
 }

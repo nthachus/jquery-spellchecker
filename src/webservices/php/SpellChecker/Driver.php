@@ -32,7 +32,7 @@ abstract class Driver {
 	public function get_suggestions($inputs = array())
 	{
 		$word = isset($inputs['word']) ? $inputs['word'] : '';
-		$response = empty($word) ? array() : $this->get_word_suggestions($word = trim($word));
+		$response = (empty($word) || !($word = trim($word))) ? array() : $this->get_word_suggestions($word);
 
 		// remove original word from the results
 		if ($response) {
@@ -54,10 +54,10 @@ abstract class Driver {
 
 	protected function _get_incorrect_words($text)
 	{
-		if (empty($text))
+		if (empty($text) || !($text = trim($text)))
 			return array();
 
-		$words = array_unique(preg_split('/\s+/u', trim($text)));
+		$words = array_unique(preg_split('/\s+/u', $text));
 		$callback = array($this, 'check_word');
 		return array_values(array_filter($words, $callback));
 	}
