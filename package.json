@@ -1,5 +1,5 @@
 {
-  "name": "jquery.spellchecker",
+  "name": "@nthachus/jquery-spellchecker",
   "title": "jQuery Spellchecker",
   "description": "A jquery spellchecker plugin",
   "version": "0.3.0",

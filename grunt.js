@@ -6,7 +6,7 @@ module.exports = function(grunt) {
   grunt.initConfig({
     pkg: '<json:package.json>',
     meta: {
-      banner: '/*\n * <%= pkg.title || pkg.name %> - v<%= pkg.version %> - ' +
+      banner: '/*\n * <%= pkg.title %> - v<%= pkg.version %> - ' +
         '<%= grunt.template.today("yyyy-mm-dd") %>\n' +
         ' * <%= pkg.homepage %>\n' +
         ' * Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
@@ -17,9 +17,9 @@ module.exports = function(grunt) {
         src: [
           'node_modules/findandreplacedomtext/src/findAndReplaceDOMText.js',
           '<banner:meta.banner>',
-          '<file_strip_banner:src/js/<%= pkg.name %>.js>'
+          '<file_strip_banner:src/js/jquery.spellchecker.js>'
         ],
-        dest: 'dist/js/<%= pkg.name %>.js'
+        dest: 'dist/js/jquery.spellchecker.js'
       }
     },
     copy: {
@@ -32,13 +32,13 @@ module.exports = function(grunt) {
     min: {
       dist: {
         src: ['<banner:meta.banner>', '<config:concat.dist.dest>'],
-        dest: 'dist/js/<%= pkg.name %>.min.js'
+        dest: 'dist/js/jquery.spellchecker.min.js'
       }
     },
     mincss: {
       compress: {
         files: {
-          "dist/css/<%= pkg.name %>.min.css": ["src/css/*.css"]
+          "dist/css/jquery.spellchecker.min.css": ["src/css/*.css"]
         }
       }
     },
