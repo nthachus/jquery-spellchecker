@@ -636,7 +636,7 @@
 }));
 
 /*
- * jQuery Spellchecker - v0.3.0 - 2018-01-22
+ * jQuery Spellchecker - v0.3.1 - 2018-01-24
  * https://github.com/badsyntax/jquery-spellchecker
  * Copyright (c) 2018 Richard Willis; Licensed MIT
  */
@@ -1452,7 +1452,7 @@
     this.incorrectWord = word;
     this.incorrectWordElement = element;
     this.spellCheckerElement = incorrectWords.spellCheckerElement;
-    //this.spellCheckerIndex = this.elements.index(this.spellCheckerElement);
+    this.spellCheckerIndex = this.elements.index(this.spellCheckerElement);
     this.suggestBox.showSuggestedWords(this.getSuggestions.bind(this), word, element);
     this.trigger('select.word', e);
   };

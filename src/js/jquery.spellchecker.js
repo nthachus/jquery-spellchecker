@@ -815,7 +815,7 @@
     this.incorrectWord = word;
     this.incorrectWordElement = element;
     this.spellCheckerElement = incorrectWords.spellCheckerElement;
-    //this.spellCheckerIndex = this.elements.index(this.spellCheckerElement);
+    this.spellCheckerIndex = this.elements.index(this.spellCheckerElement);
     this.suggestBox.showSuggestedWords(this.getSuggestions.bind(this), word, element);
     this.trigger('select.word', e);
   };
