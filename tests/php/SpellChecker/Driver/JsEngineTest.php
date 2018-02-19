@@ -22,37 +22,43 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 		static::flushCache();
 	}
 
+	const MOCK_CLASS = 'SpellChecker\Driver\JsEngine';
+
 	public function testConstructor()
 	{
-		$constructor = (new \ReflectionClass(JsEngine::class))->getConstructor();
+		$rc = new \ReflectionClass(static::MOCK_CLASS);
+		$constructor = $rc->getConstructor();
 
 		static::flushCache();
 		$this->assertNull(static::flushCache(true));
 
 		// get mock, without the constructor being called
 		$methods = array('loadDictionary', 'loadCustomDictionary', 'loadCustomBannedWords', 'loadEnforcedCorrections', 'loadCommonTypos');
-		$mock = $this->getMock(JsEngine::class, $methods, array(), '', false);
+		$mock = $this->getMock(static::MOCK_CLASS, $methods, array(), '', false);
 
 		// set expectations for constructor calls
-		$mock->expects($this->once())->method('loadDictionary')->with($this->equalTo('en'));
-		$mock->expects($this->once())->method('loadCustomDictionary')->with($this->equalTo('custom.txt'));
-		$mock->expects($this->once())->method('loadCustomBannedWords')->with($this->equalTo('rules/banned-words.txt'));
-		$mock->expects($this->once())->method('loadEnforcedCorrections')->with($this->equalTo('rules/enforced-corrections.txt'));
-		$mock->expects($this->once())->method('loadCommonTypos')->with($this->equalTo('rules/common-mistakes.txt'));
+		$mock->expects($this->once())->method('loadDictionary')->with('en');
+		$mock->expects($this->once())->method('loadCustomDictionary')->with('custom.txt');
+		$mock->expects($this->once())->method('loadCustomBannedWords')->with('rules/banned-words.txt');
+		$mock->expects($this->once())->method('loadEnforcedCorrections')->with('rules/enforced-corrections.txt');
+		$mock->expects($this->once())->method('loadCommonTypos')->with('rules/common-mistakes.txt');
 
 		// now call the constructor
 		$constructor->invoke($mock);
 
-		// destructor
-		$p = new \ReflectionProperty(\PHPUnit_Framework_TestCase::class, 'mockObjects');
-		$p->setAccessible(true);
-		$this->assertCount(1, $p->getValue($this));
-		$p->setValue($this, array());
-		//
-		$mock->{'__phpunit_cleanup'}();
 		$expected = (array)$mock;
+		array_shift($expected);
 		unset($mock);
 
+		return $expected;
+	}
+
+	/**
+	 * @depends testConstructor
+	 * @param array $expected
+	 */
+	public function testDestructor($expected)
+	{
 		$this->assertNotEmpty($cacheFile = static::flushCache(true));
 		$mockSize = filesize($cacheFile);
 
@@ -65,6 +71,15 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 		$this->assertEquals($mockSize + 6 - 60, filesize($cacheFile));
 
 		@unlink($cacheFile);
+	}
+
+	/**
+	 * @expectedException \RuntimeException
+	 * @expectedExceptionMessage Dictionary directory not found.
+	 */
+	public function testConstructorWithoutDictionaryPath()
+	{
+		new JsEngine(array('dictionaryPath' => __FILE__));
 	}
 
 	/**
@@ -83,7 +98,7 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 	public function testConstructorWithInvalidCentralDictionary()
 	{
 		static::flushCache();
-		$this->getMock(JsEngine::class, array('loadDictionary'), array(array('centralDictionary' => 'notFound.txt')));
+		$this->getMock(static::MOCK_CLASS, array('loadDictionary'), array(array('centralDictionary' => 'notFound.txt')));
 	}
 
 	/**
@@ -93,7 +108,7 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 	public function testConstructorWithInvalidBannedWordsFile()
 	{
 		static::flushCache();
-		$this->getMock(JsEngine::class,
+		$this->getMock(static::MOCK_CLASS,
 			array('loadDictionary', 'loadCustomDictionary'),
 			array(array('bannedWordsFile' => 'notFound.txt'))
 		);
@@ -106,8 +121,7 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 	public function testConstructorWithInvalidEnforcedCorrectionsFile()
 	{
 		static::flushCache();
-		$this->getMock(
-			JsEngine::class,
+		$this->getMock(static::MOCK_CLASS,
 			array('loadDictionary', 'loadCustomDictionary', 'loadCustomBannedWords'),
 			array(array('enforcedCorrectionsFile' => 'notFound.txt'))
 		);
@@ -120,8 +134,7 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 	public function testConstructorWithInvalidCommonMistakesFile()
 	{
 		static::flushCache();
-		$this->getMock(
-			JsEngine::class,
+		$this->getMock(static::MOCK_CLASS,
 			array('loadDictionary', 'loadCustomDictionary', 'loadCustomBannedWords', 'loadEnforcedCorrections'),
 			array(array('commonMistakesFile' => 'notFound.txt'))
 		);
@@ -147,7 +160,7 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 		$this->assertCount(112428, $wordsDict);
 		$this->assertEquals('mood', $wordsDict[72357]);
 
-		$mock = $this->getMock(JsEngine::class, null, array(), '', false);
+		$mock = $this->getMock(static::MOCK_CLASS, null, array(), '', false);
 		/* @var $mock \PHPUnit_Framework_MockObject_MockObject|JsEngine */
 		$result = $mock->buildDictionary($wordsDict);
 		unset($wordsDict);
@@ -163,9 +176,19 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 	public function testGetWordSuggestions()
 	{
 		$object = new JsEngine();
+		$object->setContext(array('biz', 'baize', 'fee', 'fee'));
+
 		$this->assertEquals(array(), $object->get_suggestions(array('word' => '')));
-		$this->assertEquals(array('biz', 'Baez', 'baize'), $object->get_suggestions(array('word' => 'baz ')));
-		$this->assertEquals(array('foe', 'fro', 'fee'), $object->get_suggestions(array('word' => ' foo ')));
+		$this->assertEquals(array('biz', 'baize', 'Baez'), $object->get_suggestions(array('word' => 'baz ')));
+		$this->assertEquals(array('foe', 'fee', 'fro'), $object->get_suggestions(array('word' => ' foo ')));
+
+		// enforced words
+		$this->assertEquals(array('because'), $object->get_suggestions(array('word' => " cos\n")));
+		// correct case
+		$this->assertEquals(array('Vietcong'), $object->get_suggestions(array('word' => "\tVieTCong")));
+		$this->assertEquals(array('pit'), $object->get_suggestions(array('word' => 'pIt ')));
+		// common typos
+		$this->assertEquals(array('a lot', 'Lot', 'alto', 'Aleut', 'alt'), $object->get_suggestions(array('word' => ' ALot')));
 	}
 
 	public function testIsIncorrectWord()
@@ -175,7 +198,49 @@ class JsEngineTest extends \PHPUnit_Framework_TestCase
 		$expected = array('outcome' => 'success', 'data' => array());
 		$this->assertEquals($expected, $object->get_incorrect_words(array('text' => array())));
 
-		$expected['data'] = array(array('baz'), array(), array(), array(), array('bar-foo'));
-		$this->assertEquals($expected, $object->get_incorrect_words(array('text' => array('baz bar-valid ', '', 'bar', null, ' bar-foo in_valid'))));
+		$expected['data'] = array(array('baz'), array(), array(), array(), array('bar-foo', 'cos'));
+		$this->assertEquals($expected, $object->get_incorrect_words(array('text' => array('baz bar-valid ', '', 'bar FOO', null, ' bar-foo in_valid 123 cos'))));
+	}
+
+	private static function invokeMethod($object, $methodName, $_ = null)
+	{
+		$method = new \ReflectionMethod(static::MOCK_CLASS, $methodName);
+		$method->setAccessible(true);
+		return $method->invokeArgs($object, array_slice(func_get_args(), 2));
+	}
+
+	private static function writeAttribute($object, $attributeName, $value)
+	{
+		$attribute = new \ReflectionProperty(static::MOCK_CLASS, $attributeName);
+		$attribute->setAccessible(true);
+		$attribute->setValue($object, $value);
+	}
+
+	public function testPrivateMethods()
+	{
+		$mock = $this->getMock(static::MOCK_CLASS, null, array(), '', false);
+
+		$this->writeAttribute($mock, '_dictArray', $expected = array('de' => array()));
+		$this->invokeMethod($mock, 'loadDictionary', 'de');
+		$this->assertAttributeEquals($expected, '_dictArray', $mock);
+
+		$this->invokeMethod($mock, 'decipherStrDict', 'de', null);
+		$this->assertAttributeEquals($expected, '_dictArray', $mock);
+
+		$result = $this->invokeMethod($mock, 'loadCustomDictionary', '');
+		$this->assertFalse($result);
+
+		$this->invokeMethod($mock, 'loadCustomBannedWords', null);
+		$this->assertAttributeEmpty('bannedWords', $mock);
+
+		$this->invokeMethod($mock, 'loadEnforcedCorrections', false);
+		$this->assertAttributeEmpty('bannedWords', $mock);
+		$this->assertAttributeEmpty('enforcedWords', $mock);
+
+		$this->invokeMethod($mock, 'loadCommonTypos', 0);
+		$this->assertAttributeEmpty('commonTypos', $mock);
+
+		$result = $this->invokeMethod($mock, 'inArrayIgnoreCase', null, '');
+		$this->assertFalse($result);
 	}
 }

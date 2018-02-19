@@ -12,20 +12,17 @@ class DriverTest extends \PHPUnit_Framework_TestCase
 		parent::setUp();
 
 		// create a mock for the abstract class
-		$this->mock = $this->getMockForAbstractClass(Driver::class);
+		$this->mock = $this->getMockForAbstractClass('SpellChecker\Driver');
 	}
 
 	public function testConstructor()
 	{
-		$configProp = new \ReflectionProperty(Driver::class, '_config');
-		$configProp->setAccessible(true);
-
 		// call the default constructor
-		$this->assertEquals(array(), $configProp->getValue($this->mock));
+		$this->assertAttributeEquals(array(), '_config', $this->mock);
 
 		// constructor with custom configurations
-		$mock = $this->getMockForAbstractClass(Driver::class, array(array('lang' => null, 'path' => '', 'var' => false)));
-		$this->assertEquals(array('var' => false), $configProp->getValue($mock));
+		$mock = $this->getMockForAbstractClass('SpellChecker\Driver', array(array('lang' => null, 'path' => '', 'var' => false)));
+		$this->assertAttributeEquals(array('var' => false), '_config', $mock);
 	}
 
 	public function testGetSuggestionsWithEmptyWord()
@@ -39,7 +36,7 @@ class DriverTest extends \PHPUnit_Framework_TestCase
 	{
 		$this->mock->expects($this->once())
 			->method('get_word_suggestions')
-			->with($this->equalTo('baz'))
+			->with('baz')
 			->will($this->returnValue(array('baz', 'bar')));
 
 		$this->assertEquals(array('bar'), $this->mock->get_suggestions(array('word' => 'baz ')));

@@ -81,7 +81,15 @@ abstract class Driver {
 		return $result;
 	}
 
+	/**
+	 * @param string $word
+	 * @return array
+	 */
 	abstract protected function get_word_suggestions($word);
 
+	/**
+	 * @param string $word
+	 * @return bool
+	 */
 	abstract protected function is_incorrect_word($word);
 }

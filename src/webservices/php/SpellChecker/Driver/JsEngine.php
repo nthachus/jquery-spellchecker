@@ -452,7 +452,7 @@ class JsEngine extends \SpellChecker\Driver
 
 	private static function dicIndex($word)
 	{
-		return ord(ltrim($word)[0]);
+		return ($word = ltrim($word)) ? ord($word[0]) : 0;
 	}
 
 	private static function inArrayIgnoreCase($str, $array)
@@ -527,7 +527,7 @@ class JsEngine extends \SpellChecker\Driver
 				$r = static::inArrayIgnoreCase($word, $this->_dictArray[$dictKey][$dicIndexL]);
 			}
 			if (!empty($r)) {
-				$out = array_values($r)[0];
+				$out = reset($r);
 				break;
 			}
 
@@ -535,7 +535,7 @@ class JsEngine extends \SpellChecker\Driver
 				$r = static::inArrayIgnoreCase($word, $this->_dictArray[$dictKey][$dicIndexU]);
 			}
 			if (!empty($r)) {
-				$out = array_values($r)[0];
+				$out = reset($r);
 				break;
 			}
 		}

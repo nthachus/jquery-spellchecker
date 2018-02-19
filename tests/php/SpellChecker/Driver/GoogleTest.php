@@ -1,21 +1,29 @@
 <?php namespace SpellChecker\Driver;
 
-//region Mocking global functions
-
-function curl_exec($ch)
-{
-	return (GoogleTest::$LOADED === true) ? \curl_exec($ch) : GoogleTest::$LOADED;
-}
-
-function curl_error($ch)
-{
-	return GoogleTest::$LOADED ? \curl_error($ch) : 'Faked';
-}
-
-//endregion
-
 class GoogleTest extends \PHPUnit_Framework_TestCase
 {
+	/**
+	 * {@inheritDoc}
+	 */
+	public static function setUpBeforeClass()
+	{
+		parent::setUpBeforeClass();
+
+		// Mocking global functions
+		EnchantTest::mockGlobalFunctions();
+
+		if (!\function_exists('SpellChecker\Driver\curl_exec')) {
+			eval('namespace SpellChecker\Driver {
+	function curl_exec($ch) {
+		return (GoogleTest::$LOADED === true) ? \curl_exec($ch) : GoogleTest::$LOADED;
+	}
+	function curl_error($ch) {
+		return GoogleTest::$LOADED ? \curl_error($ch) : \'Faked\';
+	}
+}');
+		}
+	}
+
 	static $LOADED = true;
 
 	/**
@@ -57,7 +65,7 @@ class GoogleTest extends \PHPUnit_Framework_TestCase
 	{
 		static $method;
 		if (!isset($method)) {
-			$method = new \ReflectionMethod(Google::class, 'get_matches');
+			$method = new \ReflectionMethod('SpellChecker\Driver\Google', 'get_matches');
 			$method->setAccessible(true);
 		}
 
@@ -110,7 +118,7 @@ class GoogleTest extends \PHPUnit_Framework_TestCase
 
 		/** @noinspection SpellCheckingInspection */
 		$expected = array('baza', 'bazaar', 'bazar', 'bazel', 'bazi', 'bazinga', 'bazo', 'bazooka');
-		$this->assertEquals($expected, $object->get_suggestions(array('word' => 'baz ')));
+		$this->assertEmpty(array_diff($object->get_suggestions(array('word' => 'baz ')), $expected));
 
 		/** @noinspection SpellCheckingInspection */
 		$expected = array('food', 'foodie', 'foody', 'football', 'footlocker');

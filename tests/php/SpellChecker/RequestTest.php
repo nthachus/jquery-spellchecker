@@ -4,7 +4,7 @@ class RequestTest extends \PHPUnit_Framework_TestCase
 {
 	public function testGetDriverClass()
 	{
-		$method = new \ReflectionMethod(Request::class, 'get_driver_class');
+		$method = new \ReflectionMethod('SpellChecker\Request', 'get_driver_class');
 		$method->setAccessible(true);
 
 		$expected = 'PSpell';
@@ -84,27 +84,29 @@ class RequestTest extends \PHPUnit_Framework_TestCase
 		Request::execute_action(array('action' => ''));
 	}
 
-	public function testExecuteAction()
+	const MOCK_CLASS = 'SpellChecker\Driver\BarSpell';
+
+	private static function mockSpellClass()
 	{
-		static $mock_class = 'SpellChecker\Driver\BarSpell';
-		static $mock_code = 'namespace SpellChecker\Driver {
+		if (!\class_exists(static::MOCK_CLASS)) {
+			eval('namespace SpellChecker\Driver {
 	class BarSpell {
-		function __construct() {
-			$this->args = func_get_args();
-		}
-		function fooBar() {
-			$this->params = func_get_args();
-			return $this;
+		function __construct() { $this->args = func_get_args(); }
+		function fooBar() { $this->params = func_get_args(); return $this; }
+	}
+}');
 		}
 	}
-}';
-		eval($mock_code);
+
+	public function testExecuteAction()
+	{
+		static::mockSpellClass();
 
 		/** @noinspection SpellCheckingInspection */
 		$inputs = array('driver' => 'BARspell', 'action' => 'fooBar');
 		$mock = Request::execute_action($inputs);
 		//
-		$this->assertTrue(is_object($mock) && $mock_class === get_class($mock));
+		$this->assertTrue(is_object($mock) && static::MOCK_CLASS === get_class($mock));
 		$this->assertEquals(array($inputs), $mock->params);
 		$this->assertEquals(array(array('lang' => 'en')), $mock->args);
 
@@ -112,8 +114,31 @@ class RequestTest extends \PHPUnit_Framework_TestCase
 		$inputs['word'] = 'baz';
 		$mock = Request::execute_action($inputs, array('lang' => 'de', 'dir' => false));
 		//
-		$this->assertTrue(is_object($mock) && $mock_class === get_class($mock));
+		$this->assertTrue(is_object($mock) && static::MOCK_CLASS === get_class($mock));
 		$this->assertEquals(array($inputs), $mock->params);
 		$this->assertEquals(array(array('lang' => '', 'dir' => false)), $mock->args);
+	}
+
+	public function testConstructor()
+	{
+		if (!isset($_POST)) $_POST = array();
+
+		$this->expectOutputString(null);
+		new Request();
+	}
+
+	public function testSendResponse()
+	{
+		static::mockSpellClass();
+		// Mock global functions
+		if (!\function_exists('SpellChecker\header')) {
+			eval('namespace SpellChecker { function header($s) { echo $s . PHP_EOL; } }');
+		}
+
+		$inputs = array('driver' => 'BARSpell', 'action' => 'fooBar');
+		$this->expectOutputString('Content-type: application/json' . PHP_EOL
+			. json_encode(array('args' => array(array('lang' => 'en')), 'params' => array($inputs)))
+		);
+		new Request($inputs);
 	}
 }

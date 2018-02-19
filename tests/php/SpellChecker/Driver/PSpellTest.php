@@ -1,64 +1,57 @@
 <?php namespace SpellChecker\Driver;
 
-//region Mocking global functions
-
-function pspell_new($language, $spelling = null, $jargon = null, $encoding = null, $mode = 0)
-{
-	assert($spelling === null);
-	assert($jargon === null);
-	assert($mode === 0);
-
-	return ($language === 'en') ? crc32($encoding) : false;
-}
-
-function pspell_config_create($language, $spelling = null, $jargon = null, $encoding = null)
-{
-	assert($spelling === null);
-	assert($jargon === null);
-
-	return in_array($language, array('de', 'en', 'vi')) ? compact('language', 'encoding') : false;//int
-}
-
-function pspell_config_data_dir(array &$conf, $directory, $key = 'data_dir')
-{
-	if (!empty($directory) && substr($directory, -1) == '/') {
-		$conf[$key] = $directory;
-		return true;
-	}
-	return false;
-}
-
-function pspell_config_dict_dir(array &$conf, $directory)
-{
-	return pspell_config_data_dir($conf, $directory, 'dict_dir');
-}
-
-function pspell_new_config(array $config)
-{
-	assert(isset($config['language']));
-	assert(isset($config['encoding']));
-
-	return isset($config['dict_dir']) ? crc32(serialize($config)) : false;
-}
-
-function pspell_suggest($dict_link, $word)
-{
-	assert(is_int($dict_link));
-
-	return empty($word) ? array() : array((string)$word, $word . '+');
-}
-
-function pspell_check($dict_link, $word)
-{
-	assert(is_int($dict_link));
-
-	return !empty($word) && ctype_alpha($word) && strcasecmp('baz', $word) != 0;
-}
-
-//endregion
-
 class PSpellTest extends \PHPUnit_Framework_TestCase
 {
+	/**
+	 * {@inheritDoc}
+	 */
+	public static function setUpBeforeClass()
+	{
+		parent::setUpBeforeClass();
+
+		// Mocking global functions
+		EnchantTest::mockGlobalFunctions();
+
+		if (!\function_exists('SpellChecker\Driver\pspell_new')) {
+			eval('namespace SpellChecker\Driver {
+	function pspell_new($language, $spelling = null, $jargon = null, $encoding = null, $mode = 0) {
+		assert($spelling === null);
+		assert($jargon === null);
+		assert($mode === 0);
+		return ($language === \'en\') ? crc32($encoding) : false;
+	}
+	function pspell_config_create($language, $spelling = null, $jargon = null, $encoding = null) {
+		assert($spelling === null);
+		assert($jargon === null);
+		return in_array($language, array(\'de\', \'en\', \'vi\')) ? compact(\'language\', \'encoding\') : false;//int
+	}
+	function pspell_config_data_dir(array &$conf, $directory, $key = \'data_dir\') {
+		if (!empty($directory) && substr($directory, -1) == \'/\') {
+			$conf[$key] = $directory;
+			return true;
+		}
+		return false;
+	}
+	function pspell_config_dict_dir(array &$conf, $directory) {
+		return pspell_config_data_dir($conf, $directory, \'dict_dir\');
+	}
+	function pspell_new_config(array $config) {
+		assert(isset($config[\'language\']));
+		assert(isset($config[\'encoding\']));
+		return isset($config[\'dict_dir\']) ? crc32(serialize($config)) : false;
+	}
+	function pspell_suggest($dict_link, $word) {
+		assert(is_int($dict_link));
+		return empty($word) ? array() : array((string)$word, $word . \'+\');
+	}
+	function pspell_check($dict_link, $word) {
+		assert(is_int($dict_link));
+		return !empty($word) && ctype_alpha($word) && strcasecmp(\'baz\', $word) != 0;
+	}
+}');
+		}
+	}
+
 	static $LOADED = true;
 
 	/**
@@ -82,21 +75,18 @@ class PSpellTest extends \PHPUnit_Framework_TestCase
 
 	public function testConstructor()
 	{
-		$resourceProp = new \ReflectionProperty(PSpell::class, 'pspell_link');
-		$resourceProp->setAccessible(true);
-
 		$object = new PSpell();
-		$this->assertEquals(crc32('utf-8'), $resourceProp->getValue($object));
+		$this->assertAttributeEquals(crc32('utf-8'), 'pspell_link', $object);
 
 		// constructor with custom encoding
 		$object = new PSpell(array('encoding' => 'cp1252'));
-		$this->assertEquals(crc32('cp1252'), $resourceProp->getValue($object));
+		$this->assertAttributeEquals(crc32('cp1252'), 'pspell_link', $object);
 
 		// constructor with dictionary path
 		$object = new PSpell(array('lang' => 'de', 'dictionary' => $dir = __DIR__ . '/../../../../dictionary/'));
 
 		$expected = array('language' => 'de', 'encoding' => 'utf-8', 'data_dir' => $dir, 'dict_dir' => $dir);
-		$this->assertEquals(crc32(serialize($expected)), $resourceProp->getValue($object));
+		$this->assertAttributeEquals(crc32(serialize($expected)), 'pspell_link', $object);
 	}
 
 	/**
